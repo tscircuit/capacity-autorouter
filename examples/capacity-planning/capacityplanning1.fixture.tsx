@@ -7,7 +7,7 @@ import { CapacityPathingSolver } from "lib/solvers/CapacityPathingSolver/Capacit
 import { getColorMap } from "lib/solvers/colors"
 import { ConnectivityMap } from "circuit-json-to-connectivity-map"
 import { getConnectivityMapFromSimpleRouteJson } from "lib/utils/getConnectivityMapFromSimpleRouteJson"
-import { CapacityNodeTargetMerger } from "lib/solvers/CapacityMeshSolver/CapacityNodeTargetMerger"
+import { CapacityNodeTargetMerger } from "lib/solvers/CapacityNodeTargetMerger/CapacityNodeTargetMerger"
 
 const simpleSrj = {
   bounds: {

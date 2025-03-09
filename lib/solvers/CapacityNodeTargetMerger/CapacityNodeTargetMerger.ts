@@ -50,7 +50,9 @@ export class CapacityNodeTargetMerger extends BaseSolver {
       // )
       // if (explicitlyConnected) return true
 
-      const implicitlyConnected = doRectsOverlap(n, obstacle)
+      const implicitlyConnected =
+        doRectsOverlap(n, obstacle) &&
+        obstacle.zLayers?.includes(n.availableZ?.[0])
 
       return implicitlyConnected
     })
@@ -87,6 +89,9 @@ export class CapacityNodeTargetMerger extends BaseSolver {
       _targetConnectionName: connectionName,
       _depth: connectedNodes[0]._depth,
       _parent: connectedNodes[0]._parent,
+
+      // @ts-ignore
+      _createdByMerger: true,
     }
 
     this.newNodes.push(newNode)
@@ -101,12 +106,30 @@ export class CapacityNodeTargetMerger extends BaseSolver {
     }
 
     for (const node of this.newNodes) {
+      const lowestZ = Math.min(...node.availableZ)
       graphics.rects!.push({
-        center: node.center,
+        center: {
+          x: node.center.x + lowestZ * node.width * 0.05,
+          y: node.center.y - lowestZ * node.width * 0.05,
+        },
         width: Math.max(node.width - 2, node.width * 0.8),
         height: Math.max(node.height - 2, node.height * 0.8),
-        fill: node._containsObstacle ? "rgba(255,0,0,0.1)" : "rgba(0,0,0,0.1)",
-        label: node.capacityMeshNodeId,
+        // @ts-ignore
+        stroke: node._createdByMerger ? "rgba(0,0,255,0.5)" : undefined,
+        fill: node._containsObstacle
+          ? "rgba(255,0,0,0.1)"
+          : ({
+              "0,1": "rgba(0,0,0,0.1)",
+              "0": "rgba(0,200,200, 0.1)",
+              "1": "rgba(0,0,200, 0.1)",
+            }[node.availableZ.join(",")] ?? "rgba(0,200,200,0.1)"),
+        label: [
+          node.capacityMeshNodeId,
+          node._containsTarget ? "containsTarget" : "",
+          node.availableZ.join(","),
+        ]
+          .filter(Boolean)
+          .join("\n"),
       })
     }
 

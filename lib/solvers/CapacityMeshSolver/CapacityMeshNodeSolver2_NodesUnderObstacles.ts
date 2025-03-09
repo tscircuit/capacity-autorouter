@@ -32,6 +32,23 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
     super(srj, opts)
   }
 
+  isNodeCompletelyOutsideBounds(node: CapacityMeshNode): boolean {
+    return (
+      node.center.x + node.width / 2 < this.srj.bounds.minX ||
+      node.center.x - node.width / 2 > this.srj.bounds.maxX ||
+      node.center.y + node.height / 2 < this.srj.bounds.minY ||
+      node.center.y - node.height / 2 > this.srj.bounds.maxY
+    )
+  }
+
+  isNodePartiallyOutsideBounds(node: CapacityMeshNode): boolean {
+    return (
+      node.center.x - node.width / 2 < this.srj.bounds.minX ||
+      node.center.x + node.width / 2 > this.srj.bounds.maxX ||
+      node.center.y - node.height / 2 < this.srj.bounds.minY ||
+      node.center.y + node.height / 2 > this.srj.bounds.maxY
+    )
+  }
   createChildNodeAtPosition(
     parent: CapacityMeshNode,
     opts: {
@@ -53,7 +70,11 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
       _parent: parent,
     }
 
-    childNode._containsObstacle = this.doesNodeOverlapObstacle(childNode)
+    const overlappingObstacles = this.getXYZOverlappingObstacles(childNode)
+
+    childNode._containsObstacle =
+      overlappingObstacles.length > 0 ||
+      this.isNodePartiallyOutsideBounds(childNode)
 
     const target = this.getTargetIfNodeContainsTarget(childNode)
 
@@ -65,12 +86,9 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
     if (childNode._containsObstacle) {
       childNode._completelyInsideObstacle =
         this.isNodeCompletelyInsideObstacle(childNode)
-      if (childNode._completelyInsideObstacle && childNode._containsTarget) {
-        childNode.availableZ = target!.availableZ
-      }
     }
-    childNode._shouldBeInGraph =
-      !childNode._completelyInsideObstacle || childNode._containsTarget
+    // childNode._shouldBeInGraph =
+    //   (!isOutsideBounds && !childNode._completelyInsideObstacle) || childNode._
 
     return childNode
   }
@@ -95,9 +113,11 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
         _depth: node._depth!,
       })
 
-      if (childNode._shouldBeInGraph) {
-        childNodes.push(childNode)
+      if (this.isNodeCompletelyOutsideBounds(childNode)) {
+        continue
       }
+
+      childNodes.push(childNode)
     }
 
     return childNodes
@@ -135,14 +155,10 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
         height: childNodeSize.height,
         availableZ: parent.availableZ,
       })
-      if (childNode._shouldBeInGraph) {
-        childNodes.push(childNode)
+      if (this.isNodeCompletelyOutsideBounds(childNode)) {
         continue
       }
-
-      if (childNode.availableZ.length > 1) {
-        childNodes.push(...this.getZSubdivisionChildNodes(childNode))
-      }
+      childNodes.push(childNode)
     }
 
     return childNodes
@@ -180,7 +196,12 @@ export class CapacityMeshNodeSolver2_NodeUnderObstacle extends CapacityMeshNodeS
       } else if (!shouldBeXYSubdivided && !childNode._containsObstacle) {
         finishedNewNodes.push(childNode)
       } else if (!shouldBeXYSubdivided && childNode._containsTarget) {
-        finishedNewNodes.push(childNode)
+        if (shouldBeZSubdivided) {
+          const zSubNodes = this.getZSubdivisionChildNodes(childNode)
+          finishedNewNodes.push(...zSubNodes)
+        } else {
+          finishedNewNodes.push(childNode)
+        }
       } else if (shouldBeZSubdivided) {
         finishedNewNodes.push(
           ...this.getZSubdivisionChildNodes(childNode).filter(

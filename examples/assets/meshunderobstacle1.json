@@ -51,6 +51,28 @@
       "type": "rect",
       "layers": ["top"],
       "connectedTo": []
+    },
+    {
+      "center": {
+        "x": 50,
+        "y": 90
+      },
+      "width": 10,
+      "height": 10,
+      "type": "rect",
+      "layers": ["top"],
+      "connectedTo": ["trace1"]
+    },
+    {
+      "center": {
+        "x": 10,
+        "y": 10
+      },
+      "width": 10,
+      "height": 10,
+      "type": "rect",
+      "layers": ["bottom"],
+      "connectedTo": ["trace1"]
     }
   ],
   "connections": [
@@ -60,7 +82,7 @@
         {
           "x": 10,
           "y": 10,
-          "layer": "top"
+          "layer": "bottom"
         },
         {
           "x": 50,

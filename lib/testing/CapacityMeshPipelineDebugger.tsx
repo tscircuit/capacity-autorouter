@@ -22,6 +22,7 @@ export const CapacityMeshPipelineDebugger = ({
   const [solver, setSolver] = useState<CapacityMeshSolver>(() =>
     createSolver(srj),
   )
+  const [canSelectObjects, setCanSelectObjects] = useState(false)
   const [, setForceUpdate] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const [speedLevel, setSpeedLevel] = useState(0)
@@ -64,6 +65,37 @@ export const CapacityMeshPipelineDebugger = ({
   const handleStep = () => {
     if (!solver.solved && !solver.failed) {
       solver.step()
+      setForceUpdate((prev) => prev + 1)
+    }
+  }
+
+  // Next Stage function
+  const handleNextStage = () => {
+    if (!solver.solved && !solver.failed) {
+      const initialSubSolver = solver.activeSubSolver
+
+      // Step until we get a new subsolver (null -> something)
+      if (initialSubSolver === null) {
+        while (
+          !solver.solved &&
+          !solver.failed &&
+          solver.activeSubSolver === null
+        ) {
+          solver.step()
+        }
+      }
+
+      // Now step until the subsolver completes (something -> null)
+      if (solver.activeSubSolver !== null) {
+        while (
+          !solver.solved &&
+          !solver.failed &&
+          solver.activeSubSolver !== null
+        ) {
+          solver.step()
+        }
+      }
+
       setForceUpdate((prev) => prev + 1)
     }
   }
@@ -111,6 +143,13 @@ export const CapacityMeshPipelineDebugger = ({
         </button>
         <button
           className="border rounded-md p-2 hover:bg-gray-100"
+          onClick={handleNextStage}
+          disabled={solver.solved || solver.failed}
+        >
+          Next Stage
+        </button>
+        <button
+          className="border rounded-md p-2 hover:bg-gray-100"
           onClick={() => setIsAnimating(!isAnimating)}
           disabled={solver.solved || solver.failed}
         >
@@ -147,6 +186,12 @@ export const CapacityMeshPipelineDebugger = ({
         >
           Reset
         </button>
+        <button
+          className="border rounded-md p-2 hover:bg-gray-100"
+          onClick={() => setCanSelectObjects(!canSelectObjects)}
+        >
+          {canSelectObjects ? "Disable" : "Enable"} Object Selection
+        </button>
       </div>
 
       <div className="flex gap-4 mb-4 tabular-nums">
@@ -161,6 +206,14 @@ export const CapacityMeshPipelineDebugger = ({
             {solver.solved ? "Solved" : solver.failed ? "Failed" : "No Errors"}
           </span>
         </div>
+        {solver.activeSubSolver && (
+          <div className="border p-2 rounded">
+            Active Stage:{" "}
+            <span className="font-bold">
+              {solver.activeSubSolver.constructor.name}
+            </span>
+          </div>
+        )}
         {solver.error && (
           <div className="border p-2 rounded bg-red-100">
             Error: <span className="font-bold">{solver.error}</span>
@@ -172,6 +225,7 @@ export const CapacityMeshPipelineDebugger = ({
         <InteractiveGraphics
           graphics={visualization}
           onObjectClicked={({ object }) => {
+            if (!canSelectObjects) return
             if (!object.label?.includes("cn")) return
             setDialogObject(object)
           }}

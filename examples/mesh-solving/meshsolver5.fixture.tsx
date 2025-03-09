@@ -5,6 +5,9 @@ import { CapacityMeshEdgeSolver } from "lib/solvers/CapacityMeshSolver/CapacityM
 import { combineVisualizations } from "lib/utils/combineVisualizations"
 import { CapacityNodeTargetMerger } from "lib/solvers/CapacityNodeTargetMerger/CapacityNodeTargetMerger"
 import { getConnectivityMapFromSimpleRouteJson } from "lib/utils/getConnectivityMapFromSimpleRouteJson"
+import { SingleLayerNodeMergerSolver } from "lib/solvers/SingleLayerNodeMerger/SingleLayerNodeMergerSolver"
+import { CapacityMeshNodeSolver2_NodeUnderObstacle } from "lib/solvers/CapacityMeshSolver/CapacityMeshNodeSolver2_NodesUnderObstacles"
+import { GenericSolverDebugger } from "lib/testing/GenericSolverDebugger"
 
 const simpleSrj = {
   bounds: {
@@ -18,35 +21,24 @@ const simpleSrj = {
   obstacles: [
     {
       center: {
-        x: 50,
-        y: 50,
+        x: 60,
+        y: 40,
       },
       width: 20,
-      height: 10,
+      height: 30,
       type: "rect",
-      layers: ["top", "bottom"],
+      layers: ["top"],
       connectedTo: [],
     },
     {
       center: {
-        x: 55,
-        y: 90,
-      },
-      width: 20,
-      height: 10,
-      type: "rect",
-      layers: ["top", "bottom"],
-      connectedTo: [],
-    },
-    {
-      center: {
-        x: 15,
-        y: 10,
+        x: 40,
+        y: 40,
       },
       width: 50,
       height: 10,
       type: "rect",
-      layers: ["top", "bottom"],
+      layers: ["top"],
       connectedTo: [],
     },
   ],
@@ -66,53 +58,22 @@ const simpleSrj = {
         },
       ],
     },
-    {
-      name: "trace2",
-      pointsToConnect: [
-        {
-          x: 40,
-          y: 10,
-          layer: "top",
-        },
-        {
-          x: 40,
-          y: 50,
-          layer: "top",
-        },
-      ],
-    },
   ],
 } as SimpleRouteJson
 
 export default () => {
   // Solve for mesh nodes using the CapacityMeshNodeSolver
-  const nodeSolver = new CapacityMeshNodeSolver(simpleSrj)
-  const connMap = getConnectivityMapFromSimpleRouteJson(simpleSrj)
-  while (!nodeSolver.solved) {
-    nodeSolver.step()
-  }
-
-  // Combine finished and unfinished nodes for edge solving
-  const allNodes = [...nodeSolver.finishedNodes, ...nodeSolver.unfinishedNodes]
-
-  const nodeTargetMerger = new CapacityNodeTargetMerger(
-    allNodes,
-    simpleSrj.obstacles,
-    connMap,
-  )
-  nodeTargetMerger.solve()
-
-  // Solve for mesh edges
-  const edgeSolver = new CapacityMeshEdgeSolver(nodeTargetMerger.newNodes)
-  edgeSolver.solve()
+  const nodeSolver = new CapacityMeshNodeSolver2_NodeUnderObstacle(simpleSrj)
+  nodeSolver.solve()
 
   return (
-    <InteractiveGraphics
-      graphics={combineVisualizations(
-        nodeSolver.visualize(),
-        nodeTargetMerger.visualize(),
-        edgeSolver.visualize(),
-      )}
+    <GenericSolverDebugger
+      createSolver={() => {
+        const singleLayerNodeMerger = new SingleLayerNodeMergerSolver(
+          nodeSolver.finishedNodes,
+        )
+        return singleLayerNodeMerger
+      }}
     />
   )
 }

@@ -25,11 +25,11 @@ export default () => {
 
   const animateToNextSolver = () => {
     stopAnimation()
-    const currentSolver = solver.activeSolver
+    const currentSolver = solver.activeSubSolver
     animationInterval.current = window.setInterval(() => {
       solver.step()
       forceUpdate({})
-      if (!solver.activeSolver || solver.activeSolver !== currentSolver) {
+      if (!solver.activeSubSolver || solver.activeSubSolver !== currentSolver) {
         stopAnimation()
       }
     }, 10)
@@ -38,14 +38,14 @@ export default () => {
   const animateUntilSolved = () => {
     stopAnimation()
     let stepsOfSameSolver = 0
-    let lastSolver = solver.activeSolver
+    let lastSolver = solver.activeSubSolver
     animationInterval.current = window.setInterval(() => {
       for (let i = 0; i < 10 + stepsOfSameSolver / 100; i++) {
-        if (solver.activeSolver === lastSolver) {
+        if (solver.activeSubSolver === lastSolver) {
           stepsOfSameSolver++
         } else {
           stepsOfSameSolver = 0
-          lastSolver = solver.activeSolver
+          lastSolver = solver.activeSubSolver
         }
         solver.step()
       }

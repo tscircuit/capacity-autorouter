@@ -102,6 +102,8 @@ export class CapacityMeshNodeSolver extends BaseSolver {
     const overlappingObstacles = this.getXYOverlappingObstacles(node)
     for (const target of this.targets) {
       // if (target.layer !== node.layer) continue
+      if (!target.availableZ.some((z) => node.availableZ.includes(z))) continue
+
       const targetObstacle = overlappingObstacles.find((o) =>
         isPointInRect(target, o),
       )
@@ -262,14 +264,14 @@ export class CapacityMeshNodeSolver extends BaseSolver {
       }
     }
 
-    if (
-      nodeRight < this.srj.bounds.minX ||
-      nodeLeft > this.srj.bounds.maxX ||
-      nodeBottom < this.srj.bounds.minY ||
-      nodeTop > this.srj.bounds.maxY
-    ) {
-      return true
-    }
+    // if (
+    //   nodeRight < this.srj.bounds.minX ||
+    //   nodeLeft > this.srj.bounds.maxX ||
+    //   nodeBottom < this.srj.bounds.minY ||
+    //   nodeTop > this.srj.bounds.maxY
+    // ) {
+    //   return true
+    // }
 
     return false
   }
@@ -392,9 +394,12 @@ export class CapacityMeshNodeSolver extends BaseSolver {
         center: obstacle.center,
         width: obstacle.width,
         height: obstacle.height,
-        fill: "rgba(255,0,0,0.3)",
+        fill:
+          obstacle.zLayers?.length === 1 && obstacle.zLayers?.includes(1)
+            ? "rgba(0,0,255,0.3)"
+            : "rgba(255,0,0,0.3)",
         stroke: "red",
-        label: ["obstacle", obstacle.zLayers!.join(",")].join("\n"),
+        label: ["obstacle", `z: ${obstacle.zLayers!.join(",")}`].join("\n"),
       })
     }
 
@@ -402,6 +407,10 @@ export class CapacityMeshNodeSolver extends BaseSolver {
     const allNodes = [...this.finishedNodes, ...this.unfinishedNodes]
     for (const node of allNodes) {
       const lowestZ = Math.min(...node.availableZ)
+      const isNextToBeProcessed =
+        this.unfinishedNodes.length > 0 &&
+        node === this.unfinishedNodes[this.unfinishedNodes.length - 1]
+
       graphics.rects!.push({
         center: {
           x: node.center.x + lowestZ * node.width * 0.05,
@@ -416,6 +425,7 @@ export class CapacityMeshNodeSolver extends BaseSolver {
               "0": "rgba(0,200,200, 0.1)",
               "1": "rgba(0,0,200, 0.1)",
             }[node.availableZ.join(",")] ?? "rgba(0,200,200,0.1)"),
+        stroke: isNextToBeProcessed ? "rgba(255,165,0,0.5)" : undefined,
         label: [
           node.capacityMeshNodeId,
           `availableZ: ${node.availableZ.join(",")}`,

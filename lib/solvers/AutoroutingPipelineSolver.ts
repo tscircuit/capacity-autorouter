@@ -1,6 +1,7 @@
 import type { GraphicsObject } from "graphics-debug"
 import { combineVisualizations } from "../utils/combineVisualizations"
 import type {
+  CapacityMeshNode,
   SimpleRouteJson,
   SimplifiedPcbTrace,
   SimplifiedPcbTraces,
@@ -9,6 +10,7 @@ import type {
 import { BaseSolver } from "./BaseSolver"
 import { CapacityMeshEdgeSolver } from "./CapacityMeshSolver/CapacityMeshEdgeSolver"
 import { CapacityMeshNodeSolver } from "./CapacityMeshSolver/CapacityMeshNodeSolver1"
+import { CapacityMeshNodeSolver2_NodeUnderObstacle } from "./CapacityMeshSolver/CapacityMeshNodeSolver2_NodesUnderObstacles"
 import { CapacityPathingSolver } from "./CapacityPathingSolver/CapacityPathingSolver"
 import { CapacityEdgeToPortSegmentSolver } from "./CapacityMeshSolver/CapacityEdgeToPortSegmentSolver"
 import { getColorMap } from "./colors"
@@ -20,7 +22,7 @@ import { CapacityPathingSolver3_FlexibleNegativeCapacity_AvoidLowCapacity } from
 import { CapacityPathingSolver4_FlexibleNegativeCapacity } from "./CapacityPathingSolver/CapacityPathingSolver4_FlexibleNegativeCapacity_AvoidLowCapacity_FixedDistanceCost"
 import { ConnectivityMap } from "circuit-json-to-connectivity-map"
 import { getConnectivityMapFromSimpleRouteJson } from "lib/utils/getConnectivityMapFromSimpleRouteJson"
-import { CapacityNodeTargetMerger } from "./CapacityMeshSolver/CapacityNodeTargetMerger"
+import { CapacityNodeTargetMerger } from "./CapacityNodeTargetMerger/CapacityNodeTargetMerger"
 import { CapacitySegmentPointOptimizer } from "./CapacitySegmentPointOptimizer/CapacitySegmentPointOptimizer"
 import { calculateOptimalCapacityDepth } from "../utils/getTunedTotalCapacity1"
 import { NetToPointPairsSolver } from "./NetToPointPairsSolver/NetToPointPairsSolver"
@@ -30,6 +32,11 @@ import { mapLayerNameToZ } from "lib/utils/mapLayerNameToZ"
 import { MultipleHighDensityRouteStitchSolver } from "./RouteStitchingSolver/MultipleHighDensityRouteStitchSolver"
 import { convertSrjToGraphicsObject } from "tests/fixtures/convertSrjToGraphicsObject"
 import { UnravelMultiSectionSolver } from "./UnravelSolver/UnravelMultiSectionSolver"
+import { CapacityPathingSolver5 } from "./CapacityPathingSolver/CapacityPathingSolver5"
+import { CapacityMeshNodeSolver3_LargerSingleLayerNodes } from "./CapacityMeshSolver/CapacityMeshNodeSolver3_LargerSingleLayerNodes"
+import { StrawSolver } from "./StrawSolver/StrawSolver"
+import { SingleLayerNodeMergerSolver } from "./SingleLayerNodeMerger/SingleLayerNodeMergerSolver"
+import { CapacityNodeTargetMerger2 } from "./CapacityNodeTargetMerger/CapacityNodeTargetMerger2"
 
 interface CapacityMeshSolverOptions {
   capacityDepth?: number
@@ -79,14 +86,17 @@ export class CapacityMeshSolver extends BaseSolver {
   segmentToPointOptimizer?: CapacitySegmentPointOptimizer
   highDensityRouteSolver?: HighDensitySolver
   highDensityStitchSolver?: MultipleHighDensityRouteStitchSolver
+  singleLayerNodeMerger?: SingleLayerNodeMergerSolver
+  strawSolver?: StrawSolver
 
   startTimeOfPhase: Record<string, number>
   endTimeOfPhase: Record<string, number>
   timeSpentOnPhase: Record<string, number>
 
-  activeSolver?: BaseSolver | null = null
+  activeSubSolver?: BaseSolver | null = null
   connMap: ConnectivityMap
   srjWithPointPairs?: SimpleRouteJson
+  capacityNodes: CapacityMeshNode[] | null = null
 
   pipelineDef = [
     definePipelineStep(
@@ -104,39 +114,65 @@ export class CapacityMeshSolver extends BaseSolver {
         },
       },
     ),
-    definePipelineStep("nodeSolver", CapacityMeshNodeSolver, (cms) => [
-      cms.netToPointPairsSolver?.getNewSimpleRouteJson() || cms.srj,
-      cms.opts,
-    ]),
-    definePipelineStep("nodeTargetMerger", CapacityNodeTargetMerger, (cms) => [
-      cms.nodeSolver?.finishedNodes || [],
-      cms.srj.obstacles,
-      cms.connMap,
-    ]),
-    definePipelineStep("edgeSolver", CapacityMeshEdgeSolver, (cms) => [
-      cms.nodeTargetMerger?.newNodes || [],
-    ]),
+    // definePipelineStep("nodeSolver", CapacityMeshNodeSolver, (cms) => [
+    //   cms.netToPointPairsSolver?.getNewSimpleRouteJson() || cms.srj,
+    //   cms.opts,
+    // ]),
     definePipelineStep(
-      "pathingSolver",
-      CapacityPathingSolver4_FlexibleNegativeCapacity,
+      "nodeSolver",
+      CapacityMeshNodeSolver2_NodeUnderObstacle,
       (cms) => [
-        {
-          simpleRouteJson: cms.srjWithPointPairs!,
-          nodes: cms.nodeTargetMerger?.newNodes || [],
-          edges: cms.edgeSolver?.edges || [],
-          colorMap: cms.colorMap,
-          hyperParameters: {
-            MAX_CAPACITY_FACTOR: 1,
-          },
-        },
+        cms.netToPointPairsSolver?.getNewSimpleRouteJson() || cms.srj,
+        cms.opts,
       ],
     ),
+    // definePipelineStep("nodeTargetMerger", CapacityNodeTargetMerger, (cms) => [
+    //   cms.nodeSolver?.finishedNodes || [],
+    //   cms.srj.obstacles,
+    //   cms.connMap,
+    // ]),
+    // definePipelineStep("nodeTargetMerger", CapacityNodeTargetMerger2, (cms) => [
+    //   cms.nodeSolver?.finishedNodes || [],
+    //   cms.srj.obstacles,
+    //   cms.connMap,
+    //   cms.colorMap,
+    //   cms.srj.connections,
+    // ]),
+    definePipelineStep(
+      "singleLayerNodeMerger",
+      SingleLayerNodeMergerSolver,
+      (cms) => [cms.nodeSolver?.finishedNodes!],
+    ),
+    definePipelineStep(
+      "strawSolver",
+      StrawSolver,
+      (cms) => [{ nodes: cms.singleLayerNodeMerger?.newNodes! }],
+      {
+        onSolved: (cms) => {
+          cms.capacityNodes = cms.strawSolver?.getResultNodes()!
+        },
+      },
+    ),
+    definePipelineStep("edgeSolver", CapacityMeshEdgeSolver, (cms) => [
+      cms.capacityNodes!,
+    ]),
+    definePipelineStep("pathingSolver", CapacityPathingSolver5, (cms) => [
+      {
+        simpleRouteJson: cms.srjWithPointPairs!,
+        nodes: cms.capacityNodes!,
+        edges: cms.edgeSolver?.edges || [],
+        colorMap: cms.colorMap,
+        hyperParameters: {
+          MAX_CAPACITY_FACTOR: 1,
+        },
+      },
+    ]),
     definePipelineStep(
       "edgeToPortSegmentSolver",
       CapacityEdgeToPortSegmentSolver,
       (cms) => [
         {
-          nodes: cms.nodeTargetMerger?.newNodes || [],
+          nodes: cms.capacityNodes!,
           edges: cms.edgeSolver?.edges || [],
           capacityPaths: cms.pathingSolver?.getCapacityPaths() || [],
           colorMap: cms.colorMap,
@@ -157,7 +193,7 @@ export class CapacityMeshSolver extends BaseSolver {
           {
             segments: allSegments,
             colorMap: cms.colorMap,
-            nodes: cms.nodeTargetMerger?.newNodes || [],
+            nodes: cms.capacityNodes!,
           },
         ]
       },
@@ -180,7 +216,7 @@ export class CapacityMeshSolver extends BaseSolver {
         {
           assignedSegments: cms.segmentToPointSolver?.solvedSegments || [],
           colorMap: cms.colorMap,
-          nodes: cms.nodeTargetMerger?.newNodes || [],
+          nodes: cms.capacityNodes!,
         },
       ],
     ),
@@ -244,29 +280,29 @@ export class CapacityMeshSolver extends BaseSolver {
       return
     }
 
-    if (this.activeSolver) {
-      this.activeSolver.step()
-      if (this.activeSolver.solved) {
+    if (this.activeSubSolver) {
+      this.activeSubSolver.step()
+      if (this.activeSubSolver.solved) {
         this.endTimeOfPhase[pipelineStepDef.solverName] = performance.now()
         this.timeSpentOnPhase[pipelineStepDef.solverName] =
           this.endTimeOfPhase[pipelineStepDef.solverName] -
           this.startTimeOfPhase[pipelineStepDef.solverName]
         pipelineStepDef.onSolved?.(this)
-        this.activeSolver = null
+        this.activeSubSolver = null
         this.currentPipelineStepIndex++
-      } else if (this.activeSolver.failed) {
-        this.error = this.activeSolver?.error
+      } else if (this.activeSubSolver.failed) {
+        this.error = this.activeSubSolver?.error
         this.failed = true
-        this.activeSolver = null
+        this.activeSubSolver = null
       }
       return
     }
 
     const constructorParams = pipelineStepDef.getConstructorParams(this)
-    this.activeSolver = new pipelineStepDef.solverClass(
+    this.activeSubSolver = new pipelineStepDef.solverClass(
       ...(constructorParams as [any, any, any]),
     )
-    ;(this as any)[pipelineStepDef.solverName] = this.activeSolver
+    ;(this as any)[pipelineStepDef.solverName] = this.activeSubSolver
     this.timeSpentOnPhase[pipelineStepDef.solverName] = 0
     this.startTimeOfPhase[pipelineStepDef.solverName] = performance.now()
   }
@@ -276,9 +312,13 @@ export class CapacityMeshSolver extends BaseSolver {
   }
 
   visualize(): GraphicsObject {
-    if (!this.solved && this.activeSolver) return this.activeSolver.visualize()
+    if (!this.solved && this.activeSubSolver)
+      return this.activeSubSolver.visualize()
     const netToPPSolver = this.netToPointPairsSolver?.visualize()
     const nodeViz = this.nodeSolver?.visualize()
+    const nodeTargetMergerViz = this.nodeTargetMerger?.visualize()
+    const singleLayerNodeMergerViz = this.singleLayerNodeMerger?.visualize()
+    const strawSolverViz = this.strawSolver?.visualize()
     const edgeViz = this.edgeSolver?.visualize()
     const pathingViz = this.pathingSolver?.visualize()
     const edgeToPortSegmentViz = this.edgeToPortSegmentSolver?.visualize()
@@ -293,14 +333,40 @@ export class CapacityMeshSolver extends BaseSolver {
       rects: [
         ...(this.srj.obstacles ?? []).map((o) => ({
           ...o,
-          fill: "rgba(255,0,0,0.25)",
+          fill: o.layers?.includes("top")
+            ? "rgba(255,0,0,0.25)"
+            : o.layers?.includes("bottom")
+              ? "rgba(0,0,255,0.25)"
+              : "rgba(255,0,0,0.25)",
         })),
       ],
-    }
+      lines: [
+        {
+          points: [
+            // Add five points representing the bounds of the PCB
+            {
+              x: this.srj.bounds?.minX ?? -50,
+              y: this.srj.bounds?.minY ?? -50,
+            },
+            { x: this.srj.bounds?.maxX ?? 50, y: this.srj.bounds?.minY ?? -50 },
+            { x: this.srj.bounds?.maxX ?? 50, y: this.srj.bounds?.maxY ?? 50 },
+            { x: this.srj.bounds?.minX ?? -50, y: this.srj.bounds?.maxY ?? 50 },
+            {
+              x: this.srj.bounds?.minX ?? -50,
+              y: this.srj.bounds?.minY ?? -50,
+            }, // Close the rectangle
+          ],
+          strokeColor: "rgba(255,0,0,0.25)",
+        },
+      ],
+    } as GraphicsObject
     const visualizations = [
       problemViz,
       netToPPSolver,
       nodeViz,
+      nodeTargetMergerViz,
+      singleLayerNodeMergerViz,
+      strawSolverViz,
       edgeViz,
       pathingViz,
       edgeToPortSegmentViz,

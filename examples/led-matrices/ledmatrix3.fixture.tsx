@@ -20,11 +20,11 @@ export default () => {
   const failedHdSolvers = solver.highDensityRouteSolver?.failedSolvers
 
   const animateToNextSolver = () => {
-    const currentSolver = solver.activeSolver
+    const currentSolver = solver.activeSubSolver
     const interval = setInterval(() => {
       solver.step()
       forceUpdate({})
-      if (!solver.activeSolver || solver.activeSolver !== currentSolver) {
+      if (!solver.activeSubSolver || solver.activeSubSolver !== currentSolver) {
         clearInterval(interval)
       }
     }, 10)
@@ -32,14 +32,14 @@ export default () => {
 
   const animateUntilSolved = () => {
     let stepsOfSameSolver = 0
-    let lastSolver = solver.activeSolver
+    let lastSolver = solver.activeSubSolver
     const interval = setInterval(() => {
       for (let i = 0; i < 10 + stepsOfSameSolver / 100; i++) {
-        if (solver.activeSolver === lastSolver) {
+        if (solver.activeSubSolver === lastSolver) {
           stepsOfSameSolver++
         } else {
           stepsOfSameSolver = 0
-          lastSolver = solver.activeSolver
+          lastSolver = solver.activeSubSolver
         }
         solver.step()
       }
@@ -65,11 +65,11 @@ export default () => {
       <button
         className="border m-2 p-2"
         onClick={() => {
-          const ogSolver = solver.activeSolver
+          const ogSolver = solver.activeSubSolver
           while (
-            solver.activeSolver === ogSolver &&
-            !solver.activeSolver?.failed &&
-            !solver.activeSolver?.solved
+            solver.activeSubSolver === ogSolver &&
+            !solver.activeSubSolver?.failed &&
+            !solver.activeSubSolver?.solved
           ) {
             solver.step()
           }

@@ -73,6 +73,37 @@ export const GenericSolverDebugger = ({
     }
   }
 
+  // Next Stage function
+  const handleNextStage = () => {
+    if (!mainSolver.solved && !mainSolver.failed) {
+      const initialSubSolver = mainSolver.activeSubSolver
+
+      // Step until we get a new subsolver (null -> something)
+      if (initialSubSolver === null) {
+        while (
+          !mainSolver.solved &&
+          !mainSolver.failed &&
+          mainSolver.activeSubSolver === null
+        ) {
+          mainSolver.step()
+        }
+      }
+
+      // Now step until the subsolver completes (something -> null)
+      if (mainSolver.activeSubSolver !== null) {
+        while (
+          !mainSolver.solved &&
+          !mainSolver.failed &&
+          mainSolver.activeSubSolver !== null
+        ) {
+          mainSolver.step()
+        }
+      }
+
+      setForceUpdate((prev) => prev + 1)
+    }
+  }
+
   // Solve completely
   const handleSolveCompletely = () => {
     if (!mainSolver.solved && !mainSolver.failed) {
@@ -137,6 +168,13 @@ export const GenericSolverDebugger = ({
         </button>
         <button
           className="border rounded-md p-2 hover:bg-gray-100"
+          onClick={handleNextStage}
+          disabled={mainSolver.solved || mainSolver.failed}
+        >
+          Next Stage
+        </button>
+        <button
+          className="border rounded-md p-2 hover:bg-gray-100"
           onClick={() => setIsAnimating(!isAnimating)}
           disabled={mainSolver.solved || mainSolver.failed}
         >
@@ -191,6 +229,14 @@ export const GenericSolverDebugger = ({
                 : "No Errors"}
           </span>
         </div>
+        {mainSolver.activeSubSolver && (
+          <div className="border p-2 rounded">
+            Active Stage:{" "}
+            <span className="font-bold">
+              {mainSolver.activeSubSolver.constructor.name}
+            </span>
+          </div>
+        )}
         {mainSolver.timeToSolve !== undefined && (
           <div className="border p-2 rounded">
             Time to solve:{" "}

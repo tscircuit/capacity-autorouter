@@ -237,9 +237,17 @@ export class UnravelMultiSectionSolver extends BaseSolver {
       const green = Math.floor(255 * (1 - pf))
       const color = `rgb(${red}, ${green}, 0)`
 
+      if ((this.attemptsToFixNode.get(nodeId) ?? 0) === 0 && pf === 0) {
+        continue
+      }
+
       graphics.rects.push({
         center: node.center,
-        label: `${nodeId}\n${node.width.toFixed(2)}x${node.height.toFixed(2)}\nPf: ${probabilityOfFailure.toFixed(3)}`,
+        label: [
+          nodeId,
+          `${node.width.toFixed(2)}x${node.height.toFixed(2)}`,
+          `Pf: ${probabilityOfFailure.toFixed(3)}`,
+        ].join("\n"),
         color,
         width: node.width / 8,
         height: node.height / 8,

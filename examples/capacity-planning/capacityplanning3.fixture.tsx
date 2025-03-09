@@ -7,7 +7,7 @@ import { CapacityPathingSolver } from "lib/solvers/CapacityPathingSolver/Capacit
 import { getColorMap } from "lib/solvers/colors"
 import { CapacityPathingSolver4_FlexibleNegativeCapacity } from "lib/solvers/CapacityPathingSolver/CapacityPathingSolver4_FlexibleNegativeCapacity_AvoidLowCapacity_FixedDistanceCost"
 import { getConnectivityMapFromSimpleRouteJson } from "lib/utils/getConnectivityMapFromSimpleRouteJson"
-import { CapacityNodeTargetMerger } from "lib/solvers/CapacityMeshSolver/CapacityNodeTargetMerger"
+import { CapacityNodeTargetMerger } from "lib/solvers/CapacityNodeTargetMerger/CapacityNodeTargetMerger"
 import { GenericSolverDebugger } from "lib/testing/GenericSolverDebugger"
 
 const simpleSrj = {
