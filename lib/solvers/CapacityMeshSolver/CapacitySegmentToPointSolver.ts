@@ -178,7 +178,10 @@ export class CapacitySegmentToPointSolver extends BaseSolver {
         seg.assignedPoints.map((ap) => ({
           x: ap.point.x,
           y: ap.point.y,
-          label: `${seg.capacityMeshNodeId}-${ap.connectionName}`,
+          label: [
+            `${seg.capacityMeshNodeId}-${ap.connectionName}`,
+            `z: ${seg.availableZ.join(",")}`,
+          ].join("\n"),
           color: this.colorMap[ap.connectionName],
           step: 4,
         })),

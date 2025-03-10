@@ -221,8 +221,11 @@ export class SingleHighDensityRouteSolver extends BaseSolver {
       node.y < this.bounds.minY + margin ||
       node.y > this.bounds.maxY - margin
     if (tooClose && !isVia) {
-      // If it's close to B, it's an exception
-      if (distance(node, this.B) < margin * 2) {
+      // If it's close to B or A it's an exception
+      if (
+        distance(node, this.B) < margin * 2 ||
+        distance(node, this.A) < margin * 2
+      ) {
         return false
       }
     }

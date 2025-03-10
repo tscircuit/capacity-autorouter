@@ -1,4 +1,4 @@
-import { CapacityMeshPipelineDebugger } from "lib/testing/CapacityMeshPipelineDebugger"
+import { CapacityMeshPipelineDebugger } from "lib/testing/AutoroutingPipelineDebugger"
 import keyboard3 from "examples/assets/keyboard3.json"
 import type { SimpleRouteJson } from "lib/types"
 

@@ -342,11 +342,11 @@ export const CapacityMeshPipelineDebugger = ({
                           // Get the node with port points from the segmentToPointOptimizer
                           let nodeWithPortPoints = null
                           if (
-                            solver.segmentToPointOptimizer
+                            solver.unravelMultiSectionSolver
                               ?.getNodesWithPortPoints
                           ) {
-                            nodeWithPortPoints = solver.segmentToPointOptimizer
-                              .getNodesWithPortPoints()
+                            nodeWithPortPoints = solver
+                              .unravelMultiSectionSolver!.getNodesWithPortPoints()
                               .find((n) => n.capacityMeshNodeId === nodeId)
                           }
 

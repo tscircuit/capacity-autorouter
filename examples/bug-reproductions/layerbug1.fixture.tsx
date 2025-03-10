@@ -1,4 +1,4 @@
-import { CapacityMeshPipelineDebugger } from "lib/testing/CapacityMeshPipelineDebugger"
+import { CapacityMeshPipelineDebugger } from "lib/testing/AutoroutingPipelineDebugger"
 import boardWithTopAndBottom from "examples/assets/boardwithtopandbottom.json"
 
 export default () => {
