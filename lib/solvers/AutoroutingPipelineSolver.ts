@@ -37,6 +37,7 @@ import { CapacityMeshNodeSolver3_LargerSingleLayerNodes } from "./CapacityMeshSo
 import { StrawSolver } from "./StrawSolver/StrawSolver"
 import { SingleLayerNodeMergerSolver } from "./SingleLayerNodeMerger/SingleLayerNodeMergerSolver"
 import { CapacityNodeTargetMerger2 } from "./CapacityNodeTargetMerger/CapacityNodeTargetMerger2"
+import { PathSmoothingSolver } from "./PathSmoothingSolver/PathSmoothingSolver"
 
 interface CapacityMeshSolverOptions {
   capacityDepth?: number
@@ -83,6 +84,7 @@ export class CapacityMeshSolver extends BaseSolver {
   colorMap: Record<string, string>
   segmentToPointSolver?: CapacitySegmentToPointSolver
   unravelMultiSectionSolver?: UnravelMultiSectionSolver
+  pathSmoothingSolver?: PathSmoothingSolver
   segmentToPointOptimizer?: CapacitySegmentPointOptimizer
   highDensityRouteSolver?: HighDensitySolver
   highDensityStitchSolver?: MultipleHighDensityRouteStitchSolver
@@ -241,6 +243,9 @@ export class CapacityMeshSolver extends BaseSolver {
         },
       ],
     ),
+    definePipelineStep("pathSmoothingSolver", PathSmoothingSolver, (cms) => [
+      {},
+    ]),
   ]
 
   constructor(
@@ -327,6 +332,7 @@ export class CapacityMeshSolver extends BaseSolver {
       this.segmentToPointOptimizer?.visualize()
     const highDensityViz = this.highDensityRouteSolver?.visualize()
     const highDensityStitchViz = this.highDensityStitchSolver?.visualize()
+    const pathSmoothingViz = this.pathSmoothingSolver?.visualize()
     const problemViz = {
       points: [...this.srj.connections.flatMap((c) => c.pointsToConnect)],
       rects: [
@@ -379,6 +385,7 @@ export class CapacityMeshSolver extends BaseSolver {
             convertSrjToGraphicsObject(this.getOutputSimpleRouteJson()),
           )
         : null,
+      pathSmoothingViz,
     ].filter(Boolean) as GraphicsObject[]
     // return visualizations[visualizations.length - 1]
     return combineVisualizations(...visualizations)
