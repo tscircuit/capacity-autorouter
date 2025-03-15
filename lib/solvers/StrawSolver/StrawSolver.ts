@@ -19,6 +19,7 @@ export class StrawSolver extends BaseSolver {
     strawSize?: number
   }) {
     super()
+    this.MAX_ITERATIONS = 100e3
     this.strawSize = params.strawSize ?? 0.5
     this.multiLayerNodes = []
     this.strawNodes = []

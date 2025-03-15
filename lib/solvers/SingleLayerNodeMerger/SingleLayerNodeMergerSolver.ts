@@ -29,24 +29,23 @@ export class SingleLayerNodeMergerSolver extends BaseSolver {
     }
     this.newNodes = []
     this.absorbedNodeIds = new Set()
-    const nodeWithArea: Array<[string, number]> = []
+    const nodeWithArea: Array<[CapacityMeshNode, number]> = []
     for (const node of nodes) {
       if (node.availableZ.length > 1) {
         this.newNodes.push(node)
         this.absorbedNodeIds.add(node.capacityMeshNodeId)
       } else {
-        nodeWithArea.push([node.capacityMeshNodeId, node.width * node.height])
+        nodeWithArea.push([node, node.width * node.height])
       }
     }
     nodeWithArea.sort((a, b) => a[1] - b[1])
-    for (const [nodeId, area] of nodeWithArea) {
-      const node = this.nodeMap.get(nodeId)!
-      this.nodeMap.set(nodeId, {
+    for (const [node, area] of nodeWithArea) {
+      this.nodeMap.set(node.capacityMeshNodeId, {
         ...node,
         center: { ...node.center },
       })
     }
-    this.currentBatchNodeIds = nodeWithArea.map((n) => n[0])
+    this.currentBatchNodeIds = nodeWithArea.map((n) => n[0].capacityMeshNodeId)
     this.nextBatchNodeIds = []
     this.batchHadModifications = false
   }
@@ -54,15 +53,15 @@ export class SingleLayerNodeMergerSolver extends BaseSolver {
   getAdjacentSameLayerUnprocessedNodes(rootNode: CapacityMeshNode) {
     const adjacentNodes: CapacityMeshNode[] = []
     for (const unprocessedNodeId of this.currentBatchNodeIds) {
-      if (this.absorbedNodeIds.has(unprocessedNodeId)) continue
       const unprocessedNode = this.nodeMap.get(unprocessedNodeId)!
+      if (!areNodesBordering(rootNode, unprocessedNode)) continue
       if (unprocessedNode.availableZ[0] !== rootNode.availableZ[0]) continue
       if (
         unprocessedNode._containsTarget &&
         unprocessedNode._targetConnectionName !== rootNode._targetConnectionName
       )
         continue
-      if (!areNodesBordering(rootNode, unprocessedNode)) continue
+      if (this.absorbedNodeIds.has(unprocessedNodeId)) continue
       adjacentNodes.push(unprocessedNode)
     }
     return adjacentNodes

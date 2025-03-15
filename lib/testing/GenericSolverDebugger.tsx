@@ -6,11 +6,15 @@ import { combineVisualizations } from "lib/utils/combineVisualizations"
 interface GenericSolverDebuggerProps {
   createSolver: () => BaseSolver
   animationSpeed?: number
+  onSolverStarted?: (solver: BaseSolver) => void
+  onSolverCompleted?: (solver: BaseSolver) => void
 }
 
 export const GenericSolverDebugger = ({
   createSolver,
   animationSpeed = 10,
+  onSolverStarted,
+  onSolverCompleted,
 }: GenericSolverDebuggerProps) => {
   const [mainSolver, setMainSolver] = useState<BaseSolver>(() => createSolver())
   const [forcedUpdates, setForceUpdate] = useState(0)
@@ -110,6 +114,9 @@ export const GenericSolverDebugger = ({
   // Solve completely
   const handleSolveCompletely = () => {
     if (!mainSolver.solved && !mainSolver.failed) {
+      if (onSolverStarted) {
+        onSolverStarted(mainSolver)
+      }
       mainSolver.solve()
       setForceUpdate((prev) => prev + 1)
     }
@@ -169,6 +176,16 @@ export const GenericSolverDebugger = ({
 
     setForceUpdate((prev) => prev + 1)
   }
+
+  useEffect(() => {
+    if (
+      (mainSolver.solved || mainSolver.failed) &&
+      onSolverCompleted &&
+      mainSolver.iterations > 0
+    ) {
+      onSolverCompleted(mainSolver)
+    }
+  }, [mainSolver.iterations])
 
   // Increase animation speed
   const increaseSpeed = () => {
